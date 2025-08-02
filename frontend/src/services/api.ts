@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 import {
   ApiResponse,
   User,
-  File,
+  CloudFile,
   PaginatedResponse,
   StorageUsage,
 } from "../types";
@@ -93,15 +93,15 @@ export const authAPI = {
 export const filesAPI = {
   getFiles: async (
     filters: any = {}
-  ): Promise<ApiResponse<PaginatedResponse<File>>> => {
+  ): Promise<ApiResponse<PaginatedResponse<CloudFile>>> => {
     const response = await api.get("/files", { params: filters });
     return response.data;
   },
 
   uploadFile: async (
-    file: File,
+    file: globalThis.File,
     category: string = "My Files"
-  ): Promise<ApiResponse<{ file: File }>> => {
+  ): Promise<ApiResponse<{ file: CloudFile }>> => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
@@ -114,7 +114,7 @@ export const filesAPI = {
     return response.data;
   },
 
-  getFile: async (id: string): Promise<ApiResponse<{ file: File }>> => {
+  getFile: async (id: string): Promise<ApiResponse<{ file: CloudFile }>> => {
     const response = await api.get(`/files/${id}`);
     return response.data;
   },
@@ -122,7 +122,7 @@ export const filesAPI = {
   updateFile: async (
     id: string,
     data: { name?: string; category?: string }
-  ): Promise<ApiResponse<{ file: File }>> => {
+  ): Promise<ApiResponse<{ file: CloudFile }>> => {
     const response = await api.put(`/files/${id}`, data);
     return response.data;
   },

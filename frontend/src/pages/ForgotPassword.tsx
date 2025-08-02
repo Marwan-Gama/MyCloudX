@@ -1,74 +1,95 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  Form,
-  Button,
-  Alert,
-  Card,
   Container,
   Row,
   Col,
+  Card,
+  Form,
+  Button,
+  Alert,
 } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import { authAPI } from "../services/api";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email) {
-      setError("Please enter your email address");
-      return;
-    }
+    setLoading(true);
+    setError(null);
 
     try {
-      setError("");
-      setSuccess("");
-      setLoading(true);
-      await authAPI.forgotPassword(email);
-      setSuccess(
-        "If an account with that email exists, a password reset link has been sent"
-      );
+      const response = await authAPI.forgotPassword(email);
+      if (response.success) {
+        setSuccess(true);
+      } else {
+        setError(response.error || "Failed to send reset email");
+      }
     } catch (error) {
-      setError(error.message || "Failed to send reset email");
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
+  if (success) {
+    return (
+      <Container className="d-flex align-items-center justify-content-center min-vh-100">
+        <Row className="w-100">
+          <Col md={6} className="mx-auto">
+            <Card>
+              <Card.Body className="p-5 text-center">
+                <h2>Check Your Email</h2>
+                <p className="text-muted mb-4">
+                  We've sent a password reset link to {email}
+                </p>
+                <Link to="/login" className="btn btn-primary">
+                  Back to Login
+                </Link>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
   return (
     <Container className="d-flex align-items-center justify-content-center min-vh-100">
       <Row className="w-100">
         <Col md={6} className="mx-auto">
-          <Card className="shadow">
+          <Card>
             <Card.Body className="p-5">
               <div className="text-center mb-4">
-                <h2 className="fw-bold text-primary">MyCloudX</h2>
-                <p className="text-muted">Reset your password</p>
+                <h2>Forgot Password</h2>
+                <p className="text-muted">
+                  Enter your email address and we'll send you a link to reset
+                  your password
+                </p>
               </div>
 
               {error && <Alert variant="danger">{error}</Alert>}
-              {success && <Alert variant="success">{success}</Alert>}
 
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Email address</Form.Label>
+                  <Form.Label>Email</Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </Form.Group>
 
                 <Button
-                  variant="primary"
                   type="submit"
+                  variant="primary"
                   className="w-100 mb-3"
                   disabled={loading}
                 >
@@ -78,7 +99,7 @@ const ForgotPassword: React.FC = () => {
 
               <div className="text-center">
                 <Link to="/login" className="text-decoration-none">
-                  Back to Sign In
+                  Back to Login
                 </Link>
               </div>
             </Card.Body>

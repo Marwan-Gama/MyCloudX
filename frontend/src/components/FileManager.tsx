@@ -3,52 +3,56 @@ import {
   Container,
   Row,
   Col,
-  Card,
   Button,
   Form,
   InputGroup,
+  Card,
+  Badge,
+  Dropdown,
+  Pagination,
+  Alert,
 } from "react-bootstrap";
-import { FiUpload, FiSearch, FiGrid, FiList, FiPlus } from "react-icons/fi";
-import { filesAPI } from "../services/api";
 import {
-  File,
-  FileCategory,
-  ViewMode,
-  SortOption,
-  SortDirection,
-} from "../types";
-import FileCard from "./FileCard";
-import FileList from "./FileList";
-import UploadModal from "./UploadModal";
+  FiPlus,
+  FiSearch,
+  FiGrid,
+  FiList,
+  FiMoreVertical,
+  FiDownload,
+  FiShare,
+  FiTrash2,
+  FiRotateCcw,
+  FiEye,
+} from "react-icons/fi";
+import { filesAPI } from "../services/api";
+import { CloudFile, SortOption, ViewMode } from "../types";
 import LoadingSpinner from "./LoadingSpinner";
+import { UploadModal } from "./UploadModal";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const FileManager: React.FC = () => {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<CloudFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("name");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [sortBy, setSortBy] = useState<SortOption>("date");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     fetchFiles();
-  }, [currentPage, sortBy, sortDirection]);
+  }, [currentPage, sortBy]);
 
   const fetchFiles = async () => {
     try {
       setLoading(true);
-      setError("");
-
       const response = await filesAPI.getFiles({
         page: currentPage,
-        limit: 20,
+        search: searchTerm,
         sortBy,
-        sortDirection,
-        search: searchTerm || undefined,
+        limit: 12,
       });
 
       if (response.success && response.data) {
@@ -58,7 +62,7 @@ const FileManager: React.FC = () => {
         setError(response.error || "Failed to fetch files");
       }
     } catch (error) {
-      setError(error.message || "Failed to fetch files");
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -70,7 +74,7 @@ const FileManager: React.FC = () => {
     fetchFiles();
   };
 
-  const handleFileUpload = async (file: File, category: string) => {
+  const handleFileUpload = async (file: globalThis.File, category: string) => {
     try {
       const response = await filesAPI.uploadFile(file, category);
       if (response.success) {
@@ -153,14 +157,6 @@ const FileManager: React.FC = () => {
             </Form.Select>
             <Button
               variant="outline-secondary"
-              onClick={() =>
-                setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-              }
-            >
-              {sortDirection === "asc" ? "↑" : "↓"}
-            </Button>
-            <Button
-              variant="outline-secondary"
               onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
             >
               {viewMode === "grid" ? <FiList /> : <FiGrid />}
@@ -169,83 +165,178 @@ const FileManager: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Error Message */}
+      {/* Error Alert */}
       {error && (
-        <Row className="mb-4">
-          <Col>
-            <div className="alert alert-danger">{error}</div>
-          </Col>
-        </Row>
+        <Alert variant="danger" onClose={() => setError(null)} dismissible>
+          {error}
+        </Alert>
       )}
 
-      {/* File List */}
-      {files.length === 0 ? (
+      {/* Files Grid/List */}
+      {viewMode === "grid" ? (
         <Row>
-          <Col>
-            <Card className="text-center py-5">
-              <Card.Body>
-                <FiUpload size={48} className="text-muted mb-3" />
-                <h5>No files found</h5>
-                <p className="text-muted">
-                  {searchTerm
-                    ? "Try adjusting your search terms."
-                    : "Upload your first file to get started."}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    variant="primary"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Upload File
-                  </Button>
-                )}
-              </Card.Body>
-            </Card>
-          </Col>
+          {files.map((file) => (
+            <Col key={file.id} xs={12} sm={6} md={4} lg={3} className="mb-3">
+              <Card className="h-100">
+                <Card.Body className="d-flex flex-column">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div className="flex-grow-1">
+                      <Card.Title className="mb-1 text-truncate">
+                        {file.name}
+                      </Card.Title>
+                      <small className="text-muted">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </small>
+                    </div>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="link" size="sm" className="p-0">
+                        <FiMoreVertical />
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        <Dropdown.Item>
+                          <FiDownload className="me-2" />
+                          Download
+                        </Dropdown.Item>
+                        <Dropdown.Item>
+                          <FiShare className="me-2" />
+                          Share
+                        </Dropdown.Item>
+                        <Dropdown.Item>
+                          <FiEye className="me-2" />
+                          Preview
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        {file.isDeleted ? (
+                          <Dropdown.Item
+                            onClick={() => handleFileRestore(file.id)}
+                          >
+                            <FiRotateCcw className="me-2" />
+                            Restore
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onClick={() => handleFileDelete(file.id)}
+                            className="text-danger"
+                          >
+                            <FiTrash2 className="me-2" />
+                            Delete
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </div>
+                  <div className="mt-auto">
+                    <Badge bg="secondary" className="me-1">
+                      {file.category}
+                    </Badge>
+                    <small className="text-muted d-block">
+                      {new Date(file.createdAt).toLocaleDateString()}
+                    </small>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
         </Row>
       ) : (
-        <>
-          {viewMode === "grid" ? (
-            <FileCard
-              files={files}
-              onDelete={handleFileDelete}
-              onRestore={handleFileRestore}
-            />
-          ) : (
-            <FileList
-              files={files}
-              onDelete={handleFileDelete}
-              onRestore={handleFileRestore}
-            />
-          )}
-        </>
+        <div className="table-responsive">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Category</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {files.map((file) => (
+                <tr key={file.id}>
+                  <td>{file.name}</td>
+                  <td>{(file.size / 1024 / 1024).toFixed(2)} MB</td>
+                  <td>
+                    <Badge bg="secondary">{file.category}</Badge>
+                  </td>
+                  <td>{new Date(file.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="link" size="sm">
+                        <FiMoreVertical />
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        <Dropdown.Item>
+                          <FiDownload className="me-2" />
+                          Download
+                        </Dropdown.Item>
+                        <Dropdown.Item>
+                          <FiShare className="me-2" />
+                          Share
+                        </Dropdown.Item>
+                        <Dropdown.Item>
+                          <FiEye className="me-2" />
+                          Preview
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        {file.isDeleted ? (
+                          <Dropdown.Item
+                            onClick={() => handleFileRestore(file.id)}
+                          >
+                            <FiRotateCcw className="me-2" />
+                            Restore
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onClick={() => handleFileDelete(file.id)}
+                            className="text-danger"
+                          >
+                            <FiTrash2 className="me-2" />
+                            Delete
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
         <Row className="mt-4">
-          <Col>
-            <div className="d-flex justify-content-center">
-              <div className="btn-group">
-                <Button
-                  variant="outline-primary"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button variant="outline-primary" disabled>
-                  Page {currentPage} of {totalPages}
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          <Col className="d-flex justify-content-center">
+            <Pagination>
+              <Pagination.First
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              />
+              <Pagination.Prev
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              />
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Pagination.Item
+                    key={page}
+                    active={page === currentPage}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Pagination.Item>
+                )
+              )}
+              <Pagination.Next
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              />
+              <Pagination.Last
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              />
+            </Pagination>
           </Col>
         </Row>
       )}

@@ -1,60 +1,56 @@
 import React, { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Form,
-  Button,
-  Alert,
-  Card,
   Container,
   Row,
   Col,
+  Card,
+  Form,
+  Button,
+  Alert,
 } from "react-bootstrap";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authAPI } from "../services/api";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     if (!token) {
       setError("Invalid reset token");
-      return;
-    }
-
-    if (!password || !confirmPassword) {
-      setError("Please fill in all fields");
+      setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
+      setLoading(false);
       return;
     }
 
     try {
-      setError("");
-      setSuccess("");
-      setLoading(true);
-      await authAPI.resetPassword(token, password);
-      setSuccess("Password reset successfully! Redirecting to login...");
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+      const response = await authAPI.resetPassword(token, password);
+      if (response.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      } else {
+        setError(response.error || "Failed to reset password");
+      }
     } catch (error) {
-      setError(error.message || "Failed to reset password");
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -65,13 +61,36 @@ const ResetPassword: React.FC = () => {
       <Container className="d-flex align-items-center justify-content-center min-vh-100">
         <Row className="w-100">
           <Col md={6} className="mx-auto">
-            <Card className="shadow">
+            <Card>
               <Card.Body className="p-5 text-center">
-                <Alert variant="danger">
-                  Invalid reset token. Please request a new password reset.
-                </Alert>
+                <h2>Invalid Reset Link</h2>
+                <p className="text-muted mb-4">
+                  The password reset link is invalid or has expired.
+                </p>
                 <Link to="/forgot-password" className="btn btn-primary">
-                  Request New Reset
+                  Request New Reset Link
+                </Link>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
+  if (success) {
+    return (
+      <Container className="d-flex align-items-center justify-content-center min-vh-100">
+        <Row className="w-100">
+          <Col md={6} className="mx-auto">
+            <Card>
+              <Card.Body className="p-5 text-center">
+                <h2>Password Reset Successfully</h2>
+                <p className="text-muted mb-4">
+                  Your password has been updated. Redirecting to login...
+                </p>
+                <Link to="/login" className="btn btn-primary">
+                  Go to Login
                 </Link>
               </Card.Body>
             </Card>
@@ -85,45 +104,41 @@ const ResetPassword: React.FC = () => {
     <Container className="d-flex align-items-center justify-content-center min-vh-100">
       <Row className="w-100">
         <Col md={6} className="mx-auto">
-          <Card className="shadow">
+          <Card>
             <Card.Body className="p-5">
               <div className="text-center mb-4">
-                <h2 className="fw-bold text-primary">MyCloudX</h2>
-                <p className="text-muted">Set your new password</p>
+                <h2>Reset Password</h2>
+                <p className="text-muted">Enter your new password below</p>
               </div>
 
               {error && <Alert variant="danger">{error}</Alert>}
-              {success && <Alert variant="success">{success}</Alert>}
 
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
                   <Form.Label>New Password</Form.Label>
                   <Form.Control
                     type="password"
-                    placeholder="Enter your new password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={loading}
                   />
-                  <Form.Text className="text-muted">
-                    Password must be at least 8 characters long
-                  </Form.Text>
                 </Form.Group>
 
                 <Form.Group className="mb-3">
                   <Form.Label>Confirm New Password</Form.Label>
                   <Form.Control
                     type="password"
-                    placeholder="Confirm your new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </Form.Group>
 
                 <Button
-                  variant="primary"
                   type="submit"
+                  variant="primary"
                   className="w-100 mb-3"
                   disabled={loading}
                 >
@@ -133,7 +148,7 @@ const ResetPassword: React.FC = () => {
 
               <div className="text-center">
                 <Link to="/login" className="text-decoration-none">
-                  Back to Sign In
+                  Back to Login
                 </Link>
               </div>
             </Card.Body>

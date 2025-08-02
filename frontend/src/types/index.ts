@@ -7,8 +7,8 @@ export interface User {
   createdAt: string;
 }
 
-// File types
-export interface File {
+// File types (renamed to CloudFile to avoid conflicts with browser File type)
+export interface CloudFile {
   id: string;
   name: string;
   originalName: string;
@@ -107,8 +107,8 @@ export interface FileAction {
   id: string;
   label: string;
   icon: string;
-  onClick: (file: File) => void;
-  disabled?: (file: File) => boolean;
+  onClick: (file: CloudFile) => void;
+  disabled?: (file: CloudFile) => boolean;
 }
 
 // Navigation item

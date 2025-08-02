@@ -1,11 +1,12 @@
 import React, { useState, useRef } from "react";
-import { Modal, Button, Form, ProgressBar, Alert } from "react-bootstrap";
+import { Modal, Button, Form, Alert, ProgressBar } from "react-bootstrap";
 import { FiUpload, FiX } from "react-icons/fi";
+import { getErrorMessage } from "../utils/errorHandler";
 
 interface UploadModalProps {
   show: boolean;
   onHide: () => void;
-  onUpload: (file: File, category: string) => Promise<void>;
+  onUpload: (file: globalThis.File, category: string) => Promise<void>;
 }
 
 const UploadModal: React.FC<UploadModalProps> = ({
@@ -13,35 +14,29 @@ const UploadModal: React.FC<UploadModalProps> = ({
   onHide,
   onUpload,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(
+    null
+  );
   const [category, setCategory] = useState("My Files");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check file size (50MB limit)
-      if (file.size > 50 * 1024 * 1024) {
-        setError("File size must be less than 50MB");
-        return;
-      }
       setSelectedFile(file);
-      setError("");
+      setError(null);
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      setError("Please select a file");
-      return;
-    }
+    if (!selectedFile) return;
 
     try {
       setUploading(true);
-      setError("");
+      setError(null);
       setProgress(0);
 
       // Simulate upload progress
@@ -53,14 +48,14 @@ const UploadModal: React.FC<UploadModalProps> = ({
           }
           return prev + 10;
         });
-      }, 200);
+      }, 1000);
 
       await onUpload(selectedFile, category);
 
-      clearInterval(progressInterval);
       setProgress(100);
+      clearInterval(progressInterval);
 
-      // Reset form
+      // Reset form after successful upload
       setTimeout(() => {
         setSelectedFile(null);
         setCategory("My Files");
@@ -69,7 +64,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
         onHide();
       }, 1000);
     } catch (error) {
-      setError(error.message || "Upload failed");
+      setError(getErrorMessage(error));
       setUploading(false);
       setProgress(0);
     }
@@ -80,7 +75,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
       setSelectedFile(null);
       setCategory("My Files");
       setProgress(0);
-      setError("");
+      setError(null);
       onHide();
     }
   };
@@ -179,4 +174,4 @@ const UploadModal: React.FC<UploadModalProps> = ({
   );
 };
 
-export default UploadModal;
+export { UploadModal };

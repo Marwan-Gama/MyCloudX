@@ -7,11 +7,11 @@ import {
   FiRotateCcw,
   FiShare2,
 } from "react-icons/fi";
-import { File } from "../types";
+import { CloudFile } from "../types";
 import { filesAPI } from "../services/api";
 
 interface FileListProps {
-  files: File[];
+  files: CloudFile[];
   onDelete: (fileId: string) => void;
   onRestore: (fileId: string) => void;
 }
@@ -35,7 +35,7 @@ const FileList: React.FC<FileListProps> = ({ files, onDelete, onRestore }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleDownload = async (file: File) => {
+  const handleDownload = async (file: CloudFile) => {
     try {
       const response = await filesAPI.downloadFile(file.id);
       if (response.success && response.data) {
@@ -51,7 +51,7 @@ const FileList: React.FC<FileListProps> = ({ files, onDelete, onRestore }) => {
     }
   };
 
-  const handleShare = async (file: File) => {
+  const handleShare = async (file: CloudFile) => {
     // TODO: Implement share functionality
     console.log("Share file:", file);
   };
