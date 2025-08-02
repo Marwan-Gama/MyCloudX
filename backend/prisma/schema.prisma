@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Files owned by this user
+  files File[] @relation("FileOwner")
+
+  // Files shared with this user
+  sharedFiles FileShare[] @relation("SharedWithUser")
+
+  // Files shared by this user
+  sharedByMe FileShare[] @relation("SharedByUser")
+
+  // Password reset tokens
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model File {
+  id          String   @id @default(cuid())
+  name        String
+  originalName String
+  mimeType    String
+  size        Int
+  s3Key       String   @unique
+  s3Url       String?
+  thumbnail   String?
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+  category    String   @default("My Files") // Home, My Files, Shared, Trash
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Owner of the file
+  ownerId String
+  owner   User @relation("FileOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Users who have access to this file
+  sharedWith FileShare[] @relation("SharedFile")
+
+  @@map("files")
+}
+
+model FileShare {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The file being shared
+  fileId String
+  file   File @relation("SharedFile", fields: [fileId], references: [id], onDelete: Cascade)
+
+  // User sharing the file
+  sharedByUserId String
+  sharedByUser   User @relation("SharedByUser", fields: [sharedByUserId], references: [id], onDelete: Cascade)
+
+  // User the file is shared with
+  sharedWithUserId String
+  sharedWithUser   User @relation("SharedWithUser", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, sharedWithUserId])
+  @@map("file_shares")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // User who requested the reset
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+} 
